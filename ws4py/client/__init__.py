@@ -13,6 +13,8 @@ from ws4py.exc import HandshakeError
 __all__ = ['WebSocketBaseClient']
 
 class WebSocketBaseClient(object):
+    upgrade_header = 'Upgrade'
+    
     def __init__(self, url, protocols=None, version='8'):
         self.stream = Stream()
         self.url = url
@@ -32,7 +34,7 @@ class WebSocketBaseClient(object):
         headers = [
             ('Host', host),
             ('Connection', 'Upgrade'),
-            ('Upgrade', 'websocket'),
+            (self.upgrade_header, 'websocket'),
             ('Sec-WebSocket-Key', self.key),
             ('Sec-WebSocket-Origin', self.url),
             ('Sec-WebSocket-Version', self.version)

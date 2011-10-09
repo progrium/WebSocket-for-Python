@@ -3,6 +3,8 @@ import gevent.pywsgi
 from ws4py.server.wsgi.middleware import WebSocketUpgradeMiddleware
 
 class UpgradableWSGIHandler(gevent.pywsgi.WSGIHandler):
+    upgrade_header = 'Upgrade'
+    
     """Upgradable version of gevent.pywsgi.WSGIHandler class
     
     This is a drop-in replacement for gevent.pywsgi.WSGIHandler that supports
@@ -39,7 +41,8 @@ class UpgradableWSGIHandler(gevent.pywsgi.WSGIHandler):
     
     """
     def run_application(self):
-        upgrade_header = self.environ.get('HTTP_UPGRADE', '').lower()
+        upgrade_header = self.environ.get('HTTP_%s' % 
+            self.upgrade_header.replace('-', '_').upper(), '').lower()
         if upgrade_header:
             self.environ['upgrade.protocol'] = upgrade_header
             self.environ['upgrade.socket'] = self.socket
