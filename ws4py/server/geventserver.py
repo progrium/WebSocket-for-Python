@@ -71,12 +71,14 @@ class WebSocketServer(gevent.pywsgi.WSGIServer):
     handler_class = UpgradableWSGIHandler
     
     def __init__(self, *args, **kwargs):
+        fallback_app = kwargs.pop('fallback_app', None)
         gevent.pywsgi.WSGIServer.__init__(self, *args, **kwargs)
         protocols = kwargs.pop('websocket_protocols', [])
         extensions = kwargs.pop('websocket_extensions', [])
         self.application = WebSocketUpgradeMiddleware(self.application, 
                             protocols=protocols,
-                            extensions=extensions)    
+                            extensions=extensions,
+                            fallback_app=fallback_app)    
 
 if __name__ == '__main__':
     def echo_handler(websocket, environ):
