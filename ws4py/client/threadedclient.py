@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
+import ssl
 from urlparse import urlsplit
 import socket
 import threading
@@ -44,6 +45,9 @@ class WebSocketClient(WebSocketBaseClient):
             host, port = parts.netloc.split(':')
         self.sock.connect((host, int(port)))
         
+        if parts.scheme == "wss":
+            self.sock = ssl.wrap_socket(self.sock)
+        
         self.write_to_connection(self.handshake_request)
 
         response = ''
@@ -79,8 +83,11 @@ class WebSocketClient(WebSocketBaseClient):
         try:
             self.sock.setblocking(1)
             while self.running:
-                bytes = self.read_from_connection(next_size)
-                
+                if self.__buffer:
+                    bytes, self.__buffer = self.__buffer[:next_size], self.__buffer[next_size:]
+                else:
+                    bytes = self.read_from_connection(next_size)
+
                 with self._lock:
                     s = self.stream
                     next_size = s.parser.send(bytes)
