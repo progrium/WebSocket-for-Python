@@ -30,24 +30,24 @@ class WebSocketClient(WebSocketBaseClient):
 
     def read_from_connection(self, amount):
         return self.sock.recv(amount)
-        
+
     def close_connection(self):
         try:
             self.sock.shutdown(socket.SHUT_RDWR)
             self.sock.close()
         except:
             pass
-        
+
     def connect(self):
         parts = urlsplit(self.url)
         host, port = parts.netloc, 80
         if ':' in host:
             host, port = parts.netloc.split(':')
         self.sock.connect((host, int(port)))
-        
+
         if parts.scheme == "wss":
             self.sock = ssl.wrap_socket(self.sock)
-        
+
         self.write_to_connection(self.handshake_request)
 
         response = ''
@@ -74,7 +74,7 @@ class WebSocketClient(WebSocketBaseClient):
         except HandshakeError:
             self.close_connection()
             raise
-        
+
         self._th.start()
         self.opened(protocols, extensions)
 
@@ -107,12 +107,12 @@ class WebSocketClient(WebSocketBaseClient):
                             self.close(error.code, error.reason)
                             s.errors.remove(error)
                         break
-                            
+
                     elif s.has_message:
                         self.received_message(s.message)
                         s.message.data = None
                         s.message = None
-                        
+
                     for ping in s.pings:
                         self.write_to_connection(s.pong(str(ping.data)))
                     s.pings = []
@@ -120,7 +120,7 @@ class WebSocketClient(WebSocketBaseClient):
                     for pong in s.pongs:
                         self.ponged(pong)
                     s.pongs = []
-                    
+
         except:
             print "".join(traceback.format_exception(*exc_info()))
         finally:
@@ -132,7 +132,7 @@ class WebSocketClient(WebSocketBaseClient):
 
 if __name__ == '__main__':
     import time
-    
+
     class MyClient(WebSocketClient):
         def opened(self, protocols, extensions):
             WebSocketClient.opened(self, protocols, extensions)
@@ -141,10 +141,10 @@ if __name__ == '__main__':
                     yield "#" * i
 
             self.send(data_provider())
-            
+
             for i in range(0, 200, 25):
                 self.send("*" * i)
-            
+
         def received_message(self, m):
             print m, len(str(m))
             if len(str(m)) == 175:

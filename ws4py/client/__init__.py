@@ -14,7 +14,7 @@ __all__ = ['WebSocketBaseClient']
 
 class WebSocketBaseClient(object):
     upgrade_header = 'Upgrade'
-    
+
     def __init__(self, url, protocols=None, version='8'):
         self.stream = Stream()
         self.url = url
@@ -23,14 +23,14 @@ class WebSocketBaseClient(object):
         self.key = b64encode(os.urandom(16))
         self.client_terminated = False
         self.server_terminated = False
-        
+
     @property
     def handshake_headers(self):
         parts = urlsplit(self.url)
         host = parts.netloc
         if ':' in host:
             host, port = parts.netloc.split(':')
-            
+
         headers = [
             ('Host', host),
             ('Connection', 'Upgrade'),
@@ -39,7 +39,7 @@ class WebSocketBaseClient(object):
             ('Sec-WebSocket-Origin', self.url),
             ('Sec-WebSocket-Version', self.version)
             ]
-        
+
         if self.protocols:
             headers.append(('Sec-WebSocket-Protocol', ','.join(self.protocols)))
 
@@ -48,7 +48,7 @@ class WebSocketBaseClient(object):
     @property
     def handshake_request(self):
         parts = urlsplit(self.url)
-        
+
         headers = self.handshake_headers
         request = ["GET %s HTTP/1.1" % parts.path]
         for header, value in headers:
@@ -67,12 +67,12 @@ class WebSocketBaseClient(object):
         extensions = []
 
         headers = headers.strip()
-        
+
         for header_line in headers.split('\r\n'):
             header, value = header_line.split(':', 1)
             header = header.strip().lower()
             value = value.strip().lower()
-            
+
             if header == 'upgrade' and value != 'websocket':
                 raise HandshakeError("Invalid Upgrade header: %s" % value)
 
@@ -104,7 +104,7 @@ class WebSocketBaseClient(object):
     @property
     def terminated(self):
         return self.client_terminated is True and self.server_terminated is True
-    
+
     def close(self, reason='', code=1000):
         if not self.client_terminated:
             self.client_terminated = True
@@ -121,17 +121,17 @@ class WebSocketBaseClient(object):
 
     def close_connection(self):
         raise NotImplemented()
-               
+
     def send(self, payload, binary=False):
         if isinstance(payload, basestring):
             if not binary:
                 self.write_to_connection(self.stream.text_message(payload).single(mask=True))
             else:
                 self.write_to_connection(self.stream.binary_message(payload).single(mask=True))
-        
+
         elif isinstance(payload, dict):
             self.write_to_connection(self.stream.text_message(json.dumps(payload)).single(mask=True))
-        
+
         elif type(payload) == types.GeneratorType:
             bytes = payload.next()
             first = True
