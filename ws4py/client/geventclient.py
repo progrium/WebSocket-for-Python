@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from urlparse import urlsplit
+import traceback
 import copy
+from sys import exc_info
 
 import gevent
 from gevent import Greenlet
@@ -14,7 +16,7 @@ from ws4py.exc import HandshakeError, StreamClosed
 __all__ = ['WebSocketClient']
 
 class WebSocketClient(ThreadedClient):
-    def __init__(self, url, protocols=None, version='8'):
+    def __init__(self, url, protocols=None, version='13'):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
         ThreadedClient.__init__(self, url, protocols=protocols, version=version, sock=sock)
 
@@ -48,6 +50,29 @@ class WebSocketClient(ThreadedClient):
             return msg
         else:
             return msg.data
+
+    def _receive(self):
+        next_size = 2
+        try:
+            while self.running:
+                if self.__buffer:
+                    bytes, self.__buffer = self.__buffer[:next_size], self.__buffer[next_size:]
+                else:
+                    bytes = self.read_from_connection(next_size)
+
+                if bytes:
+                    next_size = self._process(bytes)
+
+                if not bytes or next_size is None:
+                    break
+        except:
+            print "".join(traceback.format_exception(*exc_info()))
+        finally:
+            self.close_connection()
+        if self.stream.closing:
+            self.closed(self.stream.closing.code, self.stream.closing.reason)
+        else:
+            self.closed(1006)
 
 
 if __name__ == '__main__':

@@ -17,7 +17,7 @@ class WebSocketClient(WebSocketBaseClient):
         WebSocketBaseClient.__init__(self, url, protocols=protocols, version=version)
         if not sock:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
-        sock.settimeout(3)
+        #sock.settimeout(3)
         self.sock = sock
 
         self.running = True
@@ -78,6 +78,43 @@ class WebSocketClient(WebSocketBaseClient):
         self._th.start()
         self.opened(protocols, extensions)
 
+    def _process(self, bytes):
+        with self._lock:
+            s = self.stream
+            next_size = s.parser.send(bytes)
+
+            if s.closing is not None:
+                if not self.client_terminated:
+                    next_size = 2
+                    self.close()
+                else:
+                    self.server_terminated = True
+                    self.running = False
+                    return
+
+            elif s.errors:
+                errors = s.errors[:]
+                for error in s.errors:
+                    self.close(error.code, error.reason)
+                    s.errors.remove(error)
+                return
+
+            elif s.has_message:
+                self.received_message(s.message)
+                s.message.data = None
+                s.message = None
+
+            for ping in s.pings:
+                self.write_to_connection(s.pong(str(ping.data)))
+            s.pings = []
+
+            for pong in s.pongs:
+                self.ponged(pong)
+            s.pongs = []
+
+        return next_size
+
+
     def _receive(self):
         next_size = 2
         try:
@@ -88,39 +125,11 @@ class WebSocketClient(WebSocketBaseClient):
                 else:
                     bytes = self.read_from_connection(next_size)
 
-                with self._lock:
-                    s = self.stream
-                    next_size = s.parser.send(bytes)
+                if bytes:
+                    next_size = self._process(bytes)
 
-                    if s.closing is not None:
-                        if not self.client_terminated:
-                            next_size = 2
-                            self.close()
-                        else:
-                            self.server_terminated = True
-                            self.running = False
-                            break
-
-                    elif s.errors:
-                        errors = s.errors[:]
-                        for error in s.errors:
-                            self.close(error.code, error.reason)
-                            s.errors.remove(error)
-                        break
-
-                    elif s.has_message:
-                        self.received_message(s.message)
-                        s.message.data = None
-                        s.message = None
-
-                    for ping in s.pings:
-                        self.write_to_connection(s.pong(str(ping.data)))
-                    s.pings = []
-
-                    for pong in s.pongs:
-                        self.ponged(pong)
-                    s.pongs = []
-
+                if not bytes or next_size is None:
+                    break
         except:
             print "".join(traceback.format_exception(*exc_info()))
         finally:
