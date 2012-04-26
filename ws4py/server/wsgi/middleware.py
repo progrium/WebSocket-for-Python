@@ -81,7 +81,8 @@ class WebSocketUpgradeMiddleware(object):
             version = environ.get('HTTP_SEC_WEBSOCKET_VERSION')
             if version:
                 if version != str(WS_VERSION):
-                    raise HandshakeError('Unsupported WebSocket version')
+                    raise HandshakeError('Unsupported WebSocket version: %s' %
+                            version)
                 environ['websocket.version'] = str(WS_VERSION)
             else:
                 raise HandshakeError('WebSocket version required')
