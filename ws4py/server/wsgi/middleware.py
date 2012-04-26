@@ -89,7 +89,7 @@ class WebSocketUpgradeMiddleware(object):
             if self.fallback_app:
                 return self.fallback_app(environ, start_response)
             else:
-                start_response("400 Bad Handshake", [])
+                start_response("400 Bad Handshake: %s" % e, [])
                 return [str(e)]
 
         # Collect supported subprotocols
